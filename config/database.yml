@@ -1,0 +1,22 @@
+development:
+  adapter: postgresql
+  encoding: unicode
+  database: Solotodo_Maquetismo_Api
+  pool: 5
+  host: localhost
+  username: postgres
+  password: admin
+
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: Rick_And_Morty_Api
+  pool: 5
+  username: postgres
+  password: admin
+
+staging:
+  url: <%= ENV['DATABASE_URL'] %>
+
+production:
+  url: <%= ENV['DATABASE_URL'] %> 

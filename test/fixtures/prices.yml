@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  product_id: 1
+  store_id: 1
+  amount: 1
+  offer_amount: 1
+  current_amount: false
+
+two:
+  product_id: 1
+  store_id: 1
+  amount: 1
+  offer_amount: 1
+  current_amount: false
