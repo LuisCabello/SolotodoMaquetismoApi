@@ -26,5 +26,6 @@ module SolotodoMaquetismoApi
 
     # Adaptador para las colas
     config.active_job.queue_adapter = :sidekiq
+    # config.autoloader = :classic
   end
 end

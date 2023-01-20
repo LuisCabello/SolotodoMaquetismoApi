@@ -1,7 +1,7 @@
-class CategoriesController < ApplicationController
+class BrandsController < ApplicationController
   # show the categories, return a Json
   def index
-    render json: Category.all
+    render json: Brand.all
   end
 
   # # show one category according to its id, return a Json
@@ -44,9 +44,3 @@ class CategoriesController < ApplicationController
   #   params.require(:category).permit(:name)
   # end
 end
-
-# Tenemos Categorias que sera mas amplio que el tipo 
-
-# Ej : Category "Maqueta" -> blindados, figuras etc
-# Ej : Category "Herramientas" -> tipos de herramientas
-# Ej : Category "pinturas" -> tipos de pinturas

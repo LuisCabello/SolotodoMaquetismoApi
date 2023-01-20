@@ -11,102 +11,95 @@ class ScraperProductJob
 
   # HAY QUE MENEJAR LA CATEGORIA AQUI!
   def perform(url)
-
     html  = URI.open(url).read
     doc   = Nokogiri::HTML(html)
-    image = ""
+    image = ''
 
     # Hash to save data
-    product = {"name" => " ", "price" => " ", "offer_price" => " ", "type" => " ", "image" => " ", "creation_date" => " ", "category" => " ", "brand" => " " }
-    products_headers = ["name", "price", "offer_price", "type", "image", "creation_date", "category", "brand"]
-
+    product = { 'name' => ' ', 'price' => ' ', 'offer_price' => ' ', 'type' => ' ', 'image' => ' ',
+                'creation_date' => ' ', 'category' => ' ', 'brand' => ' ' }
     # Hash to save json description data
-    description = {"description" => "", "scale" => ""}
+    description = { 'description' => '', 'scale' => '' }
 
     doc.search('.row h1').map do |element|
-      product["name"] = element.inner_text.strip
+      product['name'] = element.inner_text.strip
     end
 
     doc.search('.price').map do |element|
-      product["price"] = element.inner_text.strip
+      product['price'] = element.inner_text.strip
     end
 
-    # Description for the json
-    doc.search('.p-style4').map do |element|
-      description["description"] = element.inner_text.strip
-    end
+    #------------------- Description
+
+    # Dejar para despues
+    # # Description for the json 
+    # doc.search('span').map do |element|
+    #   description['description'] = element.inner_text.strip
+    # end
 
     # # Hay que pasarlas a un jsonb
-    # # categoria, tipo, escala 
+    # # categoria, tipo, escala
     # doc.search('.breadcrumb').map do |element|
     #   element.inner_text.strip
     # end
 
+    #------------------- 
+
     # Get Img UrL
     doc.css('img').map do |element|
       image = element.attr('src')
-      if image.include?('productos')
-        break
-      end
+      break if image.include?('productos')
     end
 
     # Get the host name
     uri = URI(url)
-    product["image"] = "#{uri.host}/#{image}"
+    product['image'] = "#{uri.host}/#{image}"
 
     # Get the creation date
     time = Time.new
     values = time.to_a
-    product["creation_date"] = Time.utc(*values)
+    product['creation_date'] = Time.utc(*values)
 
-    nameProduct = product["name"]
+    nameProduct = product['name']
 
     # Get the brand
-    brand = nameProduct.partition(" ").first
+    brand = nameProduct.partition(' ').first
 
     # String to array
     nameProduct = nameProduct.split
 
-    # Get the scale
+    # Get the scale from the name product
     nameProduct.each do |x|
       if x.include?(':')
-        description["scale"] = x
+        description['scale'] = x
         break
       end
     end
 
     # Clean the name of the product
-    nameProduct.delete_if {|x| x.include?(":") }
-    nameProduct.delete_if {|x| x.include?(brand) }
+    nameProduct.delete_if { |x| x.include?(':') }
+    nameProduct.delete_if { |x| x.include?(brand) }
 
     # Final name of the product
-    nameProduct = nameProduct.join(" ")
-    product["name"] = nameProduct
+    nameProduct = nameProduct.join(' ')
+    product['name'] = nameProduct
 
     # if there is no data it is not shown
-    description = description.to_json
+    # description = description.to_json
 
-    # Take the product and save it into the csv file
-    valores = product.values
-    # csv_table = CSV.table("products.csv")
+    # Hay datos que no van en el modelo Product, si no que van en otro modelo
+    # Para las relaciones con las otras clases tenemos que ver como conseguir sus ids
 
-    # # check that the file is empty
-    # if csv_table.count <= 0
-    #   CSV.open("products.csv", "a+",  write_headers: true, headers: products_headers) do |csv|
-    #     csv << valores
-    #   end
-    # else
-    #   CSV.open("products.csv", "a+") do |csv|
-    #     csv << valores
-    #     print("\n\n -El producto fue guardado con exito \n\n")
-    #   end
-    # end
-
-    # SAVE DATA INTO DATA BASE
-    # Tal vez haya que que separar el hash por tabla 
-    
-    probando = {"name" => "Tanque pulento", "price" => " ", "offer_price" => " ", "type" => " ", "image" => " ", "creation_date" => " ", "category" => " ", "brand" => " " }
-    print(product)
-
+    # Create a new product and add the data to it, then we save it in the database
+    # final_product = Product.new
+    # final_product.name = product["name"]
+    # # final_product.price = product["price"]
+    # # final_product.offer_price = product["offer_price"]
+    # final_product.type = product["type"]
+    # final_product.image = product["image"]
+    # final_product.creation_date = product["creation_date"]
+    # # final_product.category = product["category"]
+    # # final_product.brand = product["brand"]
+    # final_product.save
   end
 end

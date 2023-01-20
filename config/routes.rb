@@ -1,7 +1,8 @@
 Rails.application.routes.draw do
-
-  resources :products, only: [:create, :index, :update, :destroy, :show]
-  resources :stores, only: [:create, :index, :update, :destroy, :show]
+  resources :products, only: %i[create index update destroy show]
+  resources :stores, only: %i[create index update destroy show]
+  resources :brands, only: %i[create index update destroy show]
+  resources :categories, only: %i[create index update destroy show]
   get 'products/index'
   get 'products/show'
 
@@ -15,5 +16,4 @@ Rails.application.routes.draw do
 
   # root to: 'products#index'
   # # Fin
-
 end
