@@ -1,19 +1,16 @@
-# Paso 4
-# Toma todos los productos de la sub-categoria y los recorre, incluyendo la paginacion
+# Step 4
+# Takes all the products of the sub-category and walks through them, including the pagination
 class ScraperPaginationMiraxJob
   include Sidekiq::Job
 
   require 'nokogiri'
   require 'open-uri'
   require 'json'
-  require 'csv'
 
-  def perform(url)
-
-    # html  = URI.open("https://www.mirax.cl/buscadorx.php?categoria=33").read
+  def perform(url, type, category_key, store_id)
     html  = URI.open(url).read
     doc   = Nokogiri::HTML(html)
-    next_page = ""
+    next_page = ''
     page_num = 2
 
     # Get the host name
@@ -50,8 +47,10 @@ class ScraperPaginationMiraxJob
 
     # Loop whit the products
     products.each do |product|
-      ScraperProductJob.perform_async("https://#{product}")
-      # print("\n" + product + "\n")
+      print("\n URL : https://#{product} con tipo : #{type} con categoria : #{category_key} y store id : #{store_id}")
+      # ScraperProductJob.perform_async("https://#{product}", type, category_key, store_id)
+      # perform_async
     end
   end
 end
+# Step 4

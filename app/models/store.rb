@@ -3,4 +3,11 @@ class Store < ApplicationRecord
   # intermediate table
   has_many :prices
   has_many :products, through: :prices
+
+  # CRUD
+  # GET Stores
+  def getStores
+    Store.all
+  end
+
 end

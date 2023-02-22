@@ -4,43 +4,43 @@ class BrandsController < ApplicationController
     render json: Brand.all
   end
 
-  # # show one category according to its id, return a Json
-  # def show
-  #   if Category.exists?(params[:id])
-  #     category = Category.find(params[:id])
-  #     render json: category
-  #   else
-  #     render json: { message: 'Category not found' }, status: :ok
-  #   end
-  # end
+  # show one category according to its id, return a Json
+  def show
+    if Brand.exists?(params[:id])
+      brand = Brand.find(params[:id])
+      render json: brand
+    else
+      render json: { message: 'Brand not found' }, status: :ok
+    end
+  end
 
-  # # Create category
-  # def create
-  #   category = Category.create(category_params)
+  # Create category
+  def create
+    brand = Brand.create(brand_params)
 
-  #   if category.errors.present?
-  #     render json: { error: category.errors }, status: :unprocessable_entity
-  #   else
-  #     render json: { message: 'Category saved successfully', result: category }, status: :created
-  #   end
-  # end
+    if brand.errors.present?
+      render json: { error: brand.errors }, status: :unprocessable_entity
+    else
+      render json: { message: 'Brand saved successfully', result: brand }, status: :created
+    end
+  end
 
-  # # Take the category for an id, and update the attributes with the ones passed to it by parameters
-  # def update
-  #   category = Category.find(params[:id])
-  #   category.update(category_params)
-  #   render json: category
-  # end
+  # Take the category for an id, and update the attributes with the ones passed to it by parameters
+  def update
+    brand = Brand.find(params[:id])
+    brand.update(brand_params)
+    render json: brand
+  end
 
-  # # destroy a category with an id
-  # def destroy
-  #   Category.destroy(params[:id])
-  # end
+  # destroy a category with an id
+  def destroy
+    Brand.destroy(params[:id])
+  end
 
-  # # serves as protection
-  # private
+  # serves as protection
+  private
 
-  # def category_params
-  #   params.require(:category).permit(:name)
-  # end
+  def brand_params
+    params.require(:brand).permit(:name)
+  end
 end

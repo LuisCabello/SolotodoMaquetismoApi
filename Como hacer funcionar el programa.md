@@ -29,3 +29,7 @@ Segundo ejemplo : ScraperProductJob.perform_sync("https://www.mirax.cl/detalles.
 **Para ver la base de datos, abrimos PostgreSql
 
 Las claves son admin y admin
+
+Ultimas pruebas de hoy
+ScraperCategoryMiraxJob.perform_sync("https://www.mirax.cl/index.php?menu=300")
+ScraperProductJob.perform_sync("https://www.mirax.cl/detalles.php?codigo=251969", "tanque", "Maquetas", 1)

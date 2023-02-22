@@ -3,6 +3,8 @@ Rails.application.routes.draw do
   resources :stores, only: %i[create index update destroy show]
   resources :brands, only: %i[create index update destroy show]
   resources :categories, only: %i[create index update destroy show]
+  resources :category_lists, only: %i[create index update destroy show]
+
   get 'products/index'
   get 'products/show'
 
