@@ -10,7 +10,7 @@ Rails.application.routes.draw do
 
   require 'sidekiq/web'
   mount Sidekiq::Web => '/sidekiq'
-
+  
   # # Scraping test
   # resources :products do
   #   match '/scrape', to: 'products#scrape', via: :post, on: :collection

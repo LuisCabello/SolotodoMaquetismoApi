@@ -1,8 +1,8 @@
 # Step 2
 # Scraper in charge of looking for the categories in which you can enter
-
 class ScraperPageMiraxJob
   include Sidekiq::Job
+  include MiraxHelper
 
   require 'nokogiri'
   require 'open-uri'
@@ -17,34 +17,8 @@ class ScraperPageMiraxJob
 
     category_key = ''
 
-    #  normalize categories
-    categories_values = {
-      'Maquetas' => [],
-      'Miniaturas' => [],
-      'Pinturas' => [],
-      'Herramientas' => []
-    }
-    categories_values['Maquetas'] << 'Aviones y helicópteros'
-    categories_values['Maquetas'] << 'Autos, camiones y motos'
-    categories_values['Maquetas'] << 'Soldados y blindados'
-    categories_values['Maquetas'] << 'Ciencia ficción y series'
-    categories_values['Maquetas'] << 'Soldados y carabineros metalicos'
-    categories_values['Maquetas'] << 'Naves espaciales'
-    categories_values['Maquetas'] << 'Barcos y submarinos'
-    categories_values['Maquetas'] << 'Calcas y fotograbados'
-
-    categories_values['Miniaturas'] << 'Miniaturas'
-
-    categories_values['Pinturas'] << 'Pinturas, efectos, diluyentes y barnices'
-
-    categories_values['Dioramas'] << 'Accesorios e insumos para dioramas'
-    
-    categories_values['Herramientas'] << 'Herramientas, pinceles y otros'
-    categories_values['Herramientas'] << 'Libros de modelismo'
-    categories_values['Herramientas'] << 'Aerógrafos y sus accesorios'
-    categories_values['Herramientas'] << 'Pegamentos'
-    categories_values['Herramientas'] << 'Otras herramientas'
-    categories_values['Herramientas'] << 'Madera terciada y balsa'
+    # Set the values for the categories
+    categories_values = category_values
 
     # Get the host name
     uri = URI(url)
@@ -87,16 +61,14 @@ class ScraperPageMiraxJob
         end
       end
 
-      
       # Check if category has subcategories
       if product.include?('menu')
-        # print("\n Scraping https://#{product} con #{categories[i]} y store_id #{store_id}")
-        # ScraperCategoryMiraxJob.perform_async("https://#{product}", category_key, store_id)
+        ScraperCategoryMiraxJob.perform_async("https://#{product}", category_key, store_id)
       else
+        print category_key
         # there is no subcategory
-        # print("\n Scraping https://#{product} con #{categories[i]} y store_id #{store_id}")
-        ScraperPaginationMiraxJob.perform_sync("https://#{product}", categories[i], category_key, store_id) # async
-      end 
+        ScraperPaginationMiraxJob.perform_async("https://#{product}", categories[i], category_key, store_id)
+      end
     end
   rescue StandardError => e
     Rails.logger.error "Error en scraper_page_mirax_job Step 2 : #{e.message}\n#{e.backtrace.join("\n")}"

@@ -10,14 +10,19 @@ class ScraperProductJob
   require 'json'
   require 'csv'
 
-  def perform(url, type, category_name, _store_id)
+  def perform(url, type, category_name, store_id)
     html  = URI.open(url).read
     doc   = Nokogiri::HTML(html)
     image = ''
     category_exists = false
+    alternative_scale = ''
+    name_product = ''
 
-    # Set $type_values
-    type_values = global_variables(category_name)
+    # Set $type_values (MiraxHelper)
+    type_values = type_variables(category_name)
+
+    # Set brands with more than one word in the name (MiraxHelper)
+    large_brands = large_brands_names
 
     # Hash to save data into Product Model
     product = { 'name' => ' ', 'type' => ' ', 'image' => ' ', 'creation_date' => ' ', 'category_id' => ' ' }
@@ -31,34 +36,48 @@ class ScraperProductJob
     @category_filter = Category.new
     final_category = @category_filter.getCategoryByName(category_name)
 
-    # Revisar bien lo de manejo de errores
-    if final_category.present?
-      product['category_id'] = final_category.id
-    else
-      # Handle the error
-      raise StandardError, "No se encontró ninguna categoría con nombre #{category_name}"
-      # Set the category to "Otros"
-      # categories_by_name = @category_filter.getCategoryByName("Otros")
-      # product['category_id'] = categories_by_name.id
-    end
+    # Validate the category exists
+    raise StandardError, "No se encontró ninguna categoría con nombre #{category_name}" unless final_category.present?
 
-    doc.search('.row h1').map do |element|
-      product['name'] = element.inner_text.strip
+    product['category_id'] = final_category.id
+    price['store_id'] = store_id
+
+    doc.search('.row h1 b').map do |element|
+      name_product = element.inner_text.strip
     end
 
     doc.search('.price').map do |element|
       price['amount'] = element.inner_text.strip
     end
 
-    # En caso de que no se identifique la categoria se deja como "otros"
-    if type.blank?
-      type = 'Otros'
-    else
-      type.downcase!
+    # Get Description for the json
+    doc.search('#descr').map do |element|
+      description['description'] = element.inner_text.strip
+    end
 
+    # In case the name does not bring the scale
+    if category_name == 'Maquetas'
+      doc.search('.breadcrumb a').map do |element|
+        alternative_scale = element.inner_text.strip
+      end
+    end
+
+    # Get Img UrL
+    doc.css('img').map do |element|
+      image = element.attr('src')
+      break if image.include?('productos')
+    end
+
+    # In the event that the category is not identified, it will be set to "others"
+    if type.blank?
+      type = 'otros'
+    else
+      type.downcase
+
+      # Tal vez sacar el segundo recorrido
       type_values.each do |key, value|
-        value.each do |stringValue|
-          next unless type.include?(stringValue)
+        value.each do |string_value|
+          next unless type.include?(string_value)
 
           type = key
           category_exists = true
@@ -69,17 +88,6 @@ class ScraperProductJob
 
     product['type'] = type
 
-    # Get Description for the json
-    doc.search('#descr').map do |element|
-      description['description'] = element.inner_text.strip
-    end
-
-    # Get Img UrL
-    doc.css('img').map do |element|
-      image = element.attr('src')
-      break if image.include?('productos')
-    end
-
     # Get the host name
     uri = URI(url)
     product['image'] = "#{uri.host}/#{image}"
@@ -89,53 +97,88 @@ class ScraperProductJob
     values = time.to_a
     product['creation_date'] = Time.utc(*values)
 
-    name_product = product['name']
-
     # Get the brand name
     brand_name = name_product.partition(' ').first
 
+    # In case the brand name is compose for 2 o more words
+    large_brands.each do |key, value|
+      brand_name = key if brand_name == value[0]
+    end
+
     # Get the Brand and the id
     @brand = Brand.new
-    final_brand =  @brand.getBrandByName(brand_name)
+    final_brand = @brand.getBrandByName(brand_name)
 
-    # String to array
-    name_product = name_product.split
+    # In case that final_brand is a special case
+    special_brand = brands_specials_cases(brand_name)
 
-    # !!!! TAL VEZ SI NO ENCUENTRA ESCALA QUE QUEDE COMO OTROS? PERO QUE TENGA QUE SER MAQUETA
-    # Get the scale from the name product
-    name_product.each do |x|
-      if x.include?(':')
-        description['scale'] = x
+    if special_brand
+      special_brand.each do |element|
+        next unless name_product.split(/\s+/)[1].include? element
+
+        brand_name = brand_name + ' ' + element
         break
       end
     end
 
-    # Clean the name of the product
-    name_product.delete_if { |x| x.include?(':') }
-    name_product.delete_if { |x| x.include?(brand_name) }
+    # Gets the scale with the 2 formats ( : and / ) and leaves all with ":"
+    scale = /(\w+:\d+)/.match(name_product)
+
+    if category_name == 'Maquetas'
+      if scale
+        description['scale'] = scale.to_s
+      elsif category_name == 'Maquetas'
+        description['scale'] = /(\w+:\d+)/.match(alternative_scale).to_s
+        if description['scale'].blank?
+          description['scale'] = %r{(?<word>\w*/\d+)\s}.match(name_product).to_s.gsub('/', ':')
+        end
+      end
+    end
+
+    # Clean the name, delete the brand and the scale( : and / )
+    if category_name == 'Maquetas'
+      name_product = name_product.gsub(/(\w+:\d+)/, '').gsub(%r{(?<word>\w*/\d+)\s},
+                                                             '').strip
+    end
+    name_product = name_product.gsub(brand_name, '').gsub(/\s{2,}/, ' ').strip if final_brand.name != 'OTROS'
 
     # Final name of the product
-    name_product = name_product.join(' ')
     product['name'] = name_product
 
-    # if there is no data it is not shown
-    # description = description.to_json
+    # print("\nEl nombre es : #{product['name']} \n")
+    # print("El tipo es : #{product['type']} \n")
+    # print("La escala es : #{description['scale']} \n")
+    # print("la marca es : #{final_brand.name} \n")
+    # print("El precio es :  #{price['amount']} \n")
 
     # Save a new Product
-    # final_product = Product.new
-    # final_product = final_product.addProduct(product['name'], description, type, product['image'], product['creation_date'],
-    #                                          product['category_id'])
-    # final_product.categories << final_category
+    final_product = Product.new
+    final_product = final_product.addProduct(product, description)
 
-    # # Save a new Price
-    # final_price = Price.new
-    # final_price = final_price.addPrice(final_product.id, store_id, price['amount'].delete('^0-9').to_i,
-    #                                    price['offer_amount'], price['current_amount'])
+    # Save a new Price
+    final_price = Price.new
+    final_price.addPrice(final_product.id, price)
 
-    # # print(final_price.errors.full_messages)
-
-    # # Save a new data into the middle table brands_products
-    # final_product.brands << final_brand
+    # Save a new data into the middle table brands_products
+    final_product.brands << final_brand
+  rescue StandardError => e
+    Rails.logger.error "Error en scraper_product_job Step 5 : #{e.message}\n#{e.backtrace.join("\n")}"
   end
 end
 # Step 5 Fin
+
+# Falto asegurar que los typos estuvieran todos en minuscula o mayuscula --
+# Algunos productos aun siguen con sus marcas en los nombres ya que son doble palabra --
+# Revisar las pinturas k4 al parecer tienen la palabra FS al lado
+# AMMO MIG JIMENEZ --
+# FANTASY FLIGHT GAMES --
+# lA MARCA WIZKIDS TAMBIEN APARECE COMO "WIZKIDS MARVEL"
+# atomic es "ATOMIC MASS GAMES" --
+# MODEL ES "MODEL GRAPHIX" --
+# Tambien BILLING BOATS --
+# ARMY ES "ARMY PAINTER" --
+# Revisar "ACALL TO ARMS" --
+
+# Atento a "LIBRO ENGLISH HEAVY TANKS EN RUSO" y "LIBRO TANK OF KAISER WWI EN RUSO" porque son libros y al parecer tienen escrita una escala en el nombre y se la sacamos
+# REVISAR LA MARCA "ATLANTIS MODELS"
+# "COLLECTIONS JAPAN 1S004 MACROSS VF-1 VALKYRIE FIGHTER MODE DIECAST GIMMICK MODEL -004"	"Macross"	"www.mirax.cl/productos/n240001a250000/n243001a244000/n243701a243800/n243746.jpg"	"Maquetas"	29990	true	"Mirax Hobbies"	"https://www.mirax.cl/index.php?menu=271"	"HACHETTE"

@@ -10,4 +10,9 @@ class Store < ApplicationRecord
     Store.all
   end
 
+  # return the first store by name
+  def getStoreyByName(name_category)
+    Store.find_by(name: name_category)
+  end
+
 end

@@ -1,38 +1,37 @@
 module MiraxHelper
-
   # Set the variable "type_values" according to the category
-  def global_variables(category)
+  def type_variables(category)
     case category
 
     when 'Maquetas'
 
       type_values = {
 
-        'Aviones' => %w[aviones],
+        'aviones' => %w[aviones],
 
-        'Tanques' => %w[blindados],
+        'tanques' => %w[blindados],
 
-        'Soldados' => %w[soldados],
+        'soldados' => %w[soldados],
 
-        'Gundam Sd' => %w[sd],
+        'gundam Sd' => %w[sd],
 
-        'Gundam Hg' => %w[hg],
+        'gundam Hg' => %w[hg],
 
-        'Gundam Mg' => %w[mg],
+        'gundam Mg' => %w[mg],
 
-        'Gundam Rg' => %w[rg],
+        'gundam Rg' => %w[rg],
 
-        'Gundam Otros' => %w[grados],
+        'gundam Otros' => %w[grados],
 
-        'Haropla' => %w[Haropla],
+        'haropla' => %w[haropla],
 
-        'Gundam 30mm' => %w[minutes],
+        'gundam 30mm' => %w[minutes],
 
-        'Otros Ciencia Ficcion' => %w[ficcion],
+        'otros ciencia ficcion' => %w[ficcion],
 
-        'Naves Espaciales' => %w[espaciales],
+        'naves espaciales' => %w[espaciales],
 
-        'Barcos y Submarinos' => %w[Barcos]
+        'barcos y submarinos' => %w[barcos]
 
       }
 
@@ -40,21 +39,21 @@ module MiraxHelper
 
       type_values = {
 
-        'Warhammer 40k Apocalypse' => %w[apocalypse],
+        'warhammer 40k apocalypse' => %w[apocalypse],
 
-        'Warhammer Age of Sigmar' => %w[sigmar],
+        'warhammer age of sigmar' => %w[sigmar],
 
-        'Warhammer 40k Killteam' => %w[killteam],
+        'warhammer 40k killteam' => %w[killteam],
 
-        'Warhammer Adeptus Titanicus' => %w[Adeptus],
+        'warhammer adeptus titanicus' => %w[adeptus],
 
-        'Warhammer Warcry' => %w[warcry],
+        'warhammer warcry' => %w[warcry],
 
-        'Warhammer Blood Bowl' => %w[Bowl],
+        'warhammer blood bowl' => %w[bowl],
 
-        'Warhammer Necromunda' => %w[necromunda],
+        'warhammer necromunda' => %w[necromunda],
 
-        'Warhammer Aeronautica Imperialis' => %w[imperialis]
+        'warhammer aeronautica imperialis' => %w[imperialis]
 
       }
 
@@ -62,21 +61,21 @@ module MiraxHelper
 
       type_values = {
 
-        'Acrílicos y Enamels Sets' => %w[Sets],
+        'acrílicos y enamels sets' => %w[sets],
 
-        'Acrílicos y Enamels Individuales/Spray' => %w[Individuales y spray],
+        'acrílicos y enamels individuales/spray' => %w[individuales], # Individuales
 
-        'Citadel Base' => %w[base],
+        'citadel base' => %w[base],
 
-        'Citadel Contrast' => %w[contrast],
+        'citadel contrast' => %w[contrast],
 
-        'Citadel Dry' => %w[dry],
+        'citadel dry' => %w[dry],
 
-        'Citadel Shade' => %w[shade],
+        'citadel shade' => %w[shade],
 
-        'Citadel Spray Primers' => %w[primers],
+        'citadel spray Primers' => %w[primers],
 
-        'Citadel Technical' => %w[technical]
+        'citadel technical' => %w[technical]
 
       }
 
@@ -84,11 +83,11 @@ module MiraxHelper
 
       type_values = {
 
-        'Edificios y Accesorios' => %w[Edificios],
+        'edificios y accesorios' => %w[edificios],
 
-        'Displays' => %w[Display],
+        'displays' => %w[display],
 
-        'Agua' => %w[Agua]
+        'agua' => %w[agua]
 
       }
 
@@ -96,18 +95,81 @@ module MiraxHelper
 
       type_values = {
 
-        'Libros' => %w[Libros],
+        'libros' => %w[libros],
 
-        'Aerógrafos' => %w[Aerógrafos],
+        'aerógrafos' => %w[aerógrafos],
 
-        'Otros' => %w[generales],
+        'otros' => %w[generales],
 
-        'Madera Balsa' => %w[balsa]
+        'madera balsa' => %w[balsa]
 
       }
 
     end
 
-    return type_values
+    type_values
+  end
+
+  # normalize categories
+  def category_values
+    categories_values = {
+      'Maquetas' => [],
+      'Miniaturas' => [],
+      'Pinturas' => [],
+      'Dioramas' => [],
+      'Herramientas' => []
+    }
+    categories_values['Maquetas'] << 'Aviones y helicópteros'
+    categories_values['Maquetas'] << 'Autos, camiones y motos'
+    categories_values['Maquetas'] << 'Soldados y blindados'
+    categories_values['Maquetas'] << 'Ciencia ficción y series'
+    categories_values['Maquetas'] << 'Soldados y carabineros metalicos'
+    categories_values['Maquetas'] << 'Naves espaciales'
+    categories_values['Maquetas'] << 'Barcos y submarinos'
+    categories_values['Maquetas'] << 'Calcas y fotograbados'
+
+    categories_values['Miniaturas'] << 'Miniaturas'
+
+    categories_values['Pinturas'] << 'Pinturas, efectos, diluyentes y barnices'
+
+    categories_values['Dioramas'] << 'Accesorios e insumos para dioramas'
+
+    categories_values['Herramientas'] << 'Herramientas, pinceles y otros'
+    categories_values['Herramientas'] << 'Libros de modelismo'
+    categories_values['Herramientas'] << 'Aerógrafos y sus accesorios'
+    categories_values['Herramientas'] << 'Pegamentos'
+    categories_values['Herramientas'] << 'Otras herramientas'
+    categories_values['Herramientas'] << 'Madera terciada y balsa'
+
+    categories_values
+  end
+
+  # Set the
+  def large_brands_names
+    {
+      'ACALL TO ARMS' => %w[ACALL],
+      'AMMO MIG JIMENEZ' => %w[AMMO],
+      'ARMY PAINTER' => %w[ARMY],
+      'ATLANTIS MODELS' => %w[ATLANTIS],
+      'ATOMIC MASS GAMES' => %w[ATOMIC],
+      'BILLING BOATS' => %w[BILLING],
+      'FANTASY FLIGHT GAMES' => %w[FANTASY],
+      'HARDER & STEENBECK' => %w[HARDER],
+      'MODEL GRAPHIX' => %w[MODEL]
+    }
+  end
+
+  def brands_specials_cases(brand)
+    case brand
+
+    when 'WIZKIDS'
+      special_case = ['MARVEL']
+    when 'OSPREY'
+      special_case = %w[B C E ESP ESS F GH GI MAA V W]
+    when 'K4'
+      special_case = %w[FS MS RAF RAL RLM]
+    end
+
+    special_case
   end
 end
