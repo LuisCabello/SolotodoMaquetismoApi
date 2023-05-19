@@ -12,7 +12,7 @@ class Product < ApplicationRecord
   attr_accessor :type
 
   # Model Crud
-  def addProduct(product, description)
+  def self.addProduct(product, description)
     final_product = Product.new
     final_product.name = product['name']
     final_product.characteristic = description.to_json

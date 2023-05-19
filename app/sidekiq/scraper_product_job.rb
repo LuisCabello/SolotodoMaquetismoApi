@@ -1,22 +1,19 @@
 # Step 5 Fin
 # Take each product and set it up, leave it ready to save the information in the database
-
 class ScraperProductJob
   include Sidekiq::Job
   include MiraxHelper
+  include UtilitiesHelper
 
   require 'nokogiri'
   require 'open-uri'
   require 'json'
-  require 'csv'
 
   def perform(url, type, category_name, store_id)
-    html  = URI.open(url).read
-    doc   = Nokogiri::HTML(html)
-    image = ''
-    category_exists = false
-    alternative_scale = ''
-    name_product = ''
+    @doc = parsing_html(url)
+
+    # Get the host name
+    @uri = URI(url)
 
     # Set $type_values (MiraxHelper)
     type_values = type_variables(category_name)
@@ -24,81 +21,128 @@ class ScraperProductJob
     # Set brands with more than one word in the name (MiraxHelper)
     large_brands = large_brands_names
 
+    @final_brand = ''
+
     # Hash to save data into Product Model
-    product = { 'name' => ' ', 'type' => ' ', 'image' => ' ', 'creation_date' => ' ', 'category_id' => ' ' }
+    @product = { 'name' => ' ', 'type' => ' ', 'image' => ' ', 'creation_date' => ' ', 'category_id' => ' ' }
     # Hash to save json description data Product Model
-    description = { 'description' => '', 'scale' => '' }
+    @description = { 'description' => '', 'scale' => '' }
 
     #  Hash to save data into Price Model
-    price = { 'product_id' => ' ', 'store_id' => ' ', 'amount' => ' ', 'offer_amount' => ' ', 'current_amount' => ' ' }
+    @price = { 'product_id' => ' ', 'store_id' => ' ', 'amount' => ' ', 'offer_amount' => ' ', 'current_amount' => ' ' }
 
+    fill_data(type_values, large_brands, type, store_id, category_name)
+
+    save_data
+  rescue StandardError => e
+    Rails.logger.error "Error en scraper_product_job Step 5 : #{e.message}\n#{e.backtrace.join("\n")}"
+  end
+
+  def fill_data(type_values, large_brands, type, store_id, category_name)
     # Get the category and the id
-    @category_filter = Category.new
-    final_category = @category_filter.getCategoryByName(category_name)
+    final_category = Category.getCategoryByName(category_name)
 
     # Validate the category exists
     raise StandardError, "No se encontró ninguna categoría con nombre #{category_name}" unless final_category.present?
 
-    product['category_id'] = final_category.id
-    price['store_id'] = store_id
+    fill_product_data(final_category, type, type_values, large_brands, category_name)
+    fill_description_data(category_name)
+    fill_price_data(store_id)
+  end
 
-    doc.search('.row h1 b').map do |element|
-      name_product = element.inner_text.strip
-    end
+  def fill_product_data(final_category, type, type_values, large_brands, category_name)
+    image = ''
 
-    doc.search('.price').map do |element|
-      price['amount'] = element.inner_text.strip
-    end
+    @product['name'] = html_product_name
 
+    # Normalize Brand Name
+    brand_name = normalize_brand_name(large_brands)
+
+    @product['name'] = clean_scale(@product) if category_name == 'Maquetas'
+    @product['name'] = clean_brand(@product, brand_name, 'name') if @final_brand.name != 'OTROS'
+
+    # category is not identified
+    type = category_not_identified(type, type_values)
+
+    @product['type'] = type
+    @product['image'] = "#{@uri.host}/#{html_img_url(image)}"
+    @product['creation_date'] = creation_date
+    @product['category_id'] = final_category.id
+  end
+
+  def fill_description_data(category_name)
+    html_description
+    alternative_scale = html_alternative_scale(category_name)
+
+    # Gets the scale with the 2 formats ( : and / ) and leaves all with ":"
+    @description['scale'] = get_scale(@product, 'name') if category_name == 'Maquetas'
+    @description['scale'] = /(\w+:\d+)/.match(alternative_scale.last)
+    @description['scale'] = get_scale(@description, 'description') if @description['scale'].blank?
+  end
+
+  def fill_price_data((store_id))
+    @price['store_id'] = store_id
+    @price['amount'] = html_price
+    @price['current_amount'] = true
+  end
+
+  def html_product_name
+    @doc.search('.row h1 b').map do |element|
+      element.inner_text.strip
+    end.first
+  end
+
+  def html_price
+    @doc.search('.price').map do |element|
+      element.inner_text.strip
+    end.first
+  end
+
+  def html_description
     # Get Description for the json
-    doc.search('#descr').map do |element|
-      description['description'] = element.inner_text.strip
+    @doc.search('#descr').map do |element|
+      @description['description'] = element.inner_text.strip
     end
+  end
 
+  def html_alternative_scale(category_name)
     # In case the name does not bring the scale
-    if category_name == 'Maquetas'
-      doc.search('.breadcrumb a').map do |element|
-        alternative_scale = element.inner_text.strip
-      end
-    end
+    return unless category_name == 'Maquetas'
 
-    # Get Img UrL
-    doc.css('img').map do |element|
+    @doc.search('.breadcrumb a').map(&:inner_text).map(&:strip)
+  end
+
+  def html_img_url(image)
+    @doc.css('img').map do |element|
       image = element.attr('src')
       break if image.include?('productos')
     end
+    image
+  end
 
+  def category_not_identified(type, type_values)
     # In the event that the category is not identified, it will be set to "others"
     if type.blank?
       type = 'otros'
     else
-      type.downcase
+      type = type.downcase
 
-      # Tal vez sacar el segundo recorrido
-      type_values.each do |key, value|
-        value.each do |string_value|
-          next unless type.include?(string_value)
-
-          type = key
-          category_exists = true
-          break
-        end
-      end
+      type_key = type_values.detect { |key, value| value.any? { |str| type.include?(str) } }&.first
+      type = type_key if type_key
     end
+    type
+  end
 
-    product['type'] = type
-
-    # Get the host name
-    uri = URI(url)
-    product['image'] = "#{uri.host}/#{image}"
-
+  def creation_date
     # Get the creation date
     time = Time.new
     values = time.to_a
-    product['creation_date'] = Time.utc(*values)
+    Time.utc(*values)
+  end
 
+  def normalize_brand_name(large_brands)
     # Get the brand name
-    brand_name = name_product.partition(' ').first
+    brand_name = @product['name'].split.first
 
     # In case the brand name is compose for 2 o more words
     large_brands.each do |key, value|
@@ -106,79 +150,34 @@ class ScraperProductJob
     end
 
     # Get the Brand and the id
-    @brand = Brand.new
-    final_brand = @brand.getBrandByName(brand_name)
+    @final_brand = Brand.getBrandByName(brand_name)
 
     # In case that final_brand is a special case
     special_brand = brands_specials_cases(brand_name)
 
-    if special_brand
-      special_brand.each do |element|
-        next unless name_product.split(/\s+/)[1].include? element
+    brand_name = normalize_special_brand(special_brand, brand_name)
+  end
 
-        brand_name = brand_name + ' ' + element
-        break
-      end
+  def normalize_special_brand(special_brand, brand_name)
+    # Get the mark and complete the name with special character
+    special_brand&.each do |element|
+      next unless @product['name'].split(/\s+/)&.[](1)&.include?(element)
+
+      brand_name = "#{brand_name} #{element}"
+      break
     end
+    brand_name
+  end
 
-    # Gets the scale with the 2 formats ( : and / ) and leaves all with ":"
-    scale = /(\w+:\d+)/.match(name_product)
-
-    if category_name == 'Maquetas'
-      if scale
-        description['scale'] = scale.to_s
-      elsif category_name == 'Maquetas'
-        description['scale'] = /(\w+:\d+)/.match(alternative_scale).to_s
-        if description['scale'].blank?
-          description['scale'] = %r{(?<word>\w*/\d+)\s}.match(name_product).to_s.gsub('/', ':')
-        end
-      end
-    end
-
-    # Clean the name, delete the brand and the scale( : and / )
-    if category_name == 'Maquetas'
-      name_product = name_product.gsub(/(\w+:\d+)/, '').gsub(%r{(?<word>\w*/\d+)\s},
-                                                             '').strip
-    end
-    name_product = name_product.gsub(brand_name, '').gsub(/\s{2,}/, ' ').strip if final_brand.name != 'OTROS'
-
-    # Final name of the product
-    product['name'] = name_product
-
-    # print("\nEl nombre es : #{product['name']} \n")
-    # print("El tipo es : #{product['type']} \n")
-    # print("La escala es : #{description['scale']} \n")
-    # print("la marca es : #{final_brand.name} \n")
-    # print("El precio es :  #{price['amount']} \n")
-
+  def save_data
     # Save a new Product
-    final_product = Product.new
-    final_product = final_product.addProduct(product, description)
+    final_product = Product.addProduct(@product, @description)
 
     # Save a new Price
-    final_price = Price.new
-    final_price.addPrice(final_product.id, price)
+    Price.addPrice(final_product.id, @price)
 
     # Save a new data into the middle table brands_products
-    final_product.brands << final_brand
-  rescue StandardError => e
-    Rails.logger.error "Error en scraper_product_job Step 5 : #{e.message}\n#{e.backtrace.join("\n")}"
+    final_product.brands << @final_brand
   end
 end
 # Step 5 Fin
-
-# Falto asegurar que los typos estuvieran todos en minuscula o mayuscula --
-# Algunos productos aun siguen con sus marcas en los nombres ya que son doble palabra --
-# Revisar las pinturas k4 al parecer tienen la palabra FS al lado
-# AMMO MIG JIMENEZ --
-# FANTASY FLIGHT GAMES --
-# lA MARCA WIZKIDS TAMBIEN APARECE COMO "WIZKIDS MARVEL"
-# atomic es "ATOMIC MASS GAMES" --
-# MODEL ES "MODEL GRAPHIX" --
-# Tambien BILLING BOATS --
-# ARMY ES "ARMY PAINTER" --
-# Revisar "ACALL TO ARMS" --
-
-# Atento a "LIBRO ENGLISH HEAVY TANKS EN RUSO" y "LIBRO TANK OF KAISER WWI EN RUSO" porque son libros y al parecer tienen escrita una escala en el nombre y se la sacamos
-# REVISAR LA MARCA "ATLANTIS MODELS"
-# "COLLECTIONS JAPAN 1S004 MACROSS VF-1 VALKYRIE FIGHTER MODE DIECAST GIMMICK MODEL -004"	"Macross"	"www.mirax.cl/productos/n240001a250000/n243001a244000/n243701a243800/n243746.jpg"	"Maquetas"	29990	true	"Mirax Hobbies"	"https://www.mirax.cl/index.php?menu=271"	"HACHETTE"

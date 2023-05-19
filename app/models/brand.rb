@@ -4,11 +4,11 @@ class Brand < ApplicationRecord
   # Crud
 
   # Get the brand by name, if is not defined then is "Others"
-  def getBrandByName(brand_name)
+  def self.getBrandByName(brand_name)
     brand = Brand.find_by(name: brand_name)
 
     if !brand
-      Brand.find_by(name: 'Otros')
+      Brand.find_by(name: 'OTROS')
     else
       brand
     end

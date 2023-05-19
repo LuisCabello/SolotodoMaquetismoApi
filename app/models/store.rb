@@ -4,15 +4,13 @@ class Store < ApplicationRecord
   has_many :prices
   has_many :products, through: :prices
 
-  # CRUD
   # GET Stores
   def getStores
     Store.all
   end
 
   # return the first store by name
-  def getStoreyByName(name_category)
+  def self.get_store_by_name(name_category)
     Store.find_by(name: name_category)
   end
-
 end

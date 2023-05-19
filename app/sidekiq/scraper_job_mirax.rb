@@ -4,8 +4,7 @@ class ScraperJobMirax
   include Sidekiq::Job
 
   def perform(_arg)
-    @stores = Store.new
-    store = @stores.getStoreyByName('Mirax Hobbies')
+    store = Store.get_store_by_name('Mirax Hobbies')
 
     if store.present?
       if store.blank?
@@ -21,3 +20,5 @@ class ScraperJobMirax
     Rails.logger.error "Error en scraper_job_mirax Step 1 : #{e.message}\n#{e.backtrace.join("\n")}"
   end
 end
+
+# Revisar los errores, pueden ser diferentes en modo Produccion "rescue StandardError" Revisar Modo Debug 

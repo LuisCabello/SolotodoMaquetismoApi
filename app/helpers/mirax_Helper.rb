@@ -111,7 +111,7 @@ module MiraxHelper
   end
 
   # normalize categories
-  def category_values
+  def self.category_values
     categories_values = {
       'Maquetas' => [],
       'Miniaturas' => [],
@@ -144,7 +144,7 @@ module MiraxHelper
     categories_values
   end
 
-  # Set the
+  # Set the Brands with two or more words
   def large_brands_names
     {
       'ACALL TO ARMS' => %w[ACALL],
